@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import RecipeCard from "@/components/RecipeCard";
 import { getRandomMealForType, getRandomMeal } from "@/lib/mealdb";
+import { getRandomEdamamRecipe, isEdamamConfigured } from "@/lib/edamam";
 import {
   blockRecipe,
   addMaybeRecipe,
@@ -15,13 +16,59 @@ import type { Recipe, RecipeAction } from "@/types/recipe";
 import { Shuffle } from "lucide-react";
 
 type MealType = "breakfast" | "lunch" | "dinner" | "any";
+type RecipeSource = "any" | "mealdb" | "edamam";
 
 export default function SuggestPage() {
   const [mealType, setMealType] = useState<MealType>("any");
+  const [source, setSource] = useState<RecipeSource>("any");
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+  const edamamAvailable = isEdamamConfigured();
+
+  const fetchFromMealDB = useCallback(
+    async (
+      blocked: Set<string>,
+      recentIds: Set<string>,
+      mealType: MealType
+    ): Promise<Recipe | null> => {
+      let attempts = 0;
+      while (attempts < 10) {
+        const candidate =
+          mealType === "any"
+            ? await getRandomMeal()
+            : await getRandomMealForType(mealType);
+        if (candidate && !blocked.has(candidate.id) && !recentIds.has(candidate.id)) {
+          return candidate;
+        }
+        attempts++;
+      }
+      return null;
+    },
+    []
+  );
+
+  const fetchFromEdamam = useCallback(
+    async (
+      blocked: Set<string>,
+      recentIds: Set<string>,
+      mealType: MealType
+    ): Promise<Recipe | null> => {
+      let attempts = 0;
+      while (attempts < 5) {
+        const candidate = await getRandomEdamamRecipe(
+          mealType === "any" ? undefined : mealType
+        );
+        if (candidate && !blocked.has(candidate.id) && !recentIds.has(candidate.id)) {
+          return candidate;
+        }
+        attempts++;
+      }
+      return null;
+    },
+    []
+  );
 
   const fetchSuggestion = useCallback(async () => {
     setLoading(true);
@@ -45,23 +92,29 @@ export default function SuggestPage() {
           .map((h) => h.recipeId)
       );
 
-      let attempts = 0;
       let candidate: Recipe | null = null;
 
-      while (attempts < 15) {
-        if (mealType === "any") {
-          candidate = await getRandomMeal();
+      if (source === "mealdb") {
+        candidate = await fetchFromMealDB(blocked, recentIds, mealType);
+      } else if (source === "edamam" && edamamAvailable) {
+        candidate = await fetchFromEdamam(blocked, recentIds, mealType);
+      } else {
+        // "any" source — randomly pick between sources
+        const useEdamam = edamamAvailable && Math.random() > 0.5;
+        if (useEdamam) {
+          candidate = await fetchFromEdamam(blocked, recentIds, mealType);
+          if (!candidate) {
+            candidate = await fetchFromMealDB(blocked, recentIds, mealType);
+          }
         } else {
-          candidate = await getRandomMealForType(mealType);
+          candidate = await fetchFromMealDB(blocked, recentIds, mealType);
+          if (!candidate && edamamAvailable) {
+            candidate = await fetchFromEdamam(blocked, recentIds, mealType);
+          }
         }
-
-        if (candidate && !blocked.has(candidate.id) && !recentIds.has(candidate.id)) {
-          break;
-        }
-        candidate = null;
-        attempts++;
       }
 
+      // Fallback to manual recipes
       if (!candidate) {
         try {
           const manualRecipes = await getManualRecipes();
@@ -85,11 +138,11 @@ export default function SuggestPage() {
         setError("Could not find a new recipe. Try a different meal type or check your blocked list.");
       }
     } catch {
-      setError("Failed to fetch recipes. Check your internet connection and Firebase config.");
+      setError("Failed to fetch recipes. Check your internet connection.");
     } finally {
       setLoading(false);
     }
-  }, [mealType]);
+  }, [mealType, source, edamamAvailable, fetchFromMealDB, fetchFromEdamam]);
 
   const handleAction = useCallback(
     async (action: RecipeAction) => {
@@ -113,7 +166,7 @@ export default function SuggestPage() {
           fetchSuggestion();
         }, 1000);
       } catch {
-        setError("Failed to save your choice. Check Firebase configuration.");
+        setError("Failed to save your choice.");
       }
     },
     [recipe, fetchSuggestion]
@@ -126,6 +179,12 @@ export default function SuggestPage() {
     { value: "dinner", label: "Dinner" },
   ];
 
+  const sources: { value: RecipeSource; label: string }[] = [
+    { value: "any", label: "All Sources" },
+    { value: "mealdb", label: "MealDB" },
+    ...(edamamAvailable ? [{ value: "edamam" as RecipeSource, label: "Edamam" }] : []),
+  ];
+
   return (
     <div className="p-4">
       <div className="mb-6">
@@ -136,7 +195,7 @@ export default function SuggestPage() {
       </div>
 
       {/* Meal type selector */}
-      <div className="flex gap-1.5 mb-4">
+      <div className="flex gap-1.5 mb-3">
         {mealTypes.map(({ value, label }) => (
           <button
             key={value}
@@ -151,6 +210,25 @@ export default function SuggestPage() {
           </button>
         ))}
       </div>
+
+      {/* Source selector */}
+      {edamamAvailable && (
+        <div className="flex gap-1.5 mb-4">
+          {sources.map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => setSource(value)}
+              className={`flex-1 py-2 rounded-lg text-[10px] font-medium transition-colors ${
+                source === value
+                  ? "bg-gray-200 text-gray-800"
+                  : "bg-white text-gray-400 border border-gray-100 hover:bg-gray-50"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Suggest button */}
       <button

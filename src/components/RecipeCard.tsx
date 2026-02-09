@@ -2,7 +2,7 @@
 
 import type { Recipe, RecipeAction } from "@/types/recipe";
 import { useState } from "react";
-import { ChevronDown, ChevronUp, ExternalLink, Youtube, X, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, ExternalLink, Youtube, X, Trash2, Clock, Flame, Users } from "lucide-react";
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -20,6 +20,9 @@ export default function RecipeCard({
   onRemove,
 }: RecipeCardProps) {
   const [showDetails, setShowDetails] = useState(false);
+
+  const hasNutritionInfo = recipe.calories || recipe.totalTime || recipe.servings;
+  const isEdamam = recipe.source === "edamam";
 
   return (
     <div className="bg-white rounded-xl overflow-hidden border border-gray-100">
@@ -46,12 +49,51 @@ export default function RecipeCard({
           <h3 className="text-white font-semibold text-lg leading-tight">{recipe.name}</h3>
           <p className="text-white/70 text-xs mt-0.5">
             {recipe.category}{recipe.area ? ` · ${recipe.area}` : ""}
+            {isEdamam && <span className="ml-1 opacity-60">· Edamam</span>}
           </p>
         </div>
       </div>
 
+      {/* Nutrition / meta bar */}
+      {hasNutritionInfo && (
+        <div className="px-4 pt-3 flex gap-4">
+          {recipe.calories != null && (
+            <div className="flex items-center gap-1 text-xs text-gray-500">
+              <Flame size={12} className="text-gray-400" />
+              <span>{recipe.calories} cal</span>
+            </div>
+          )}
+          {recipe.totalTime != null && recipe.totalTime > 0 && (
+            <div className="flex items-center gap-1 text-xs text-gray-500">
+              <Clock size={12} className="text-gray-400" />
+              <span>{recipe.totalTime} min</span>
+            </div>
+          )}
+          {recipe.servings != null && (
+            <div className="flex items-center gap-1 text-xs text-gray-500">
+              <Users size={12} className="text-gray-400" />
+              <span>{recipe.servings} servings</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Diet / health labels */}
+      {recipe.dietLabels && recipe.dietLabels.length > 0 && (
+        <div className="px-4 pt-2 flex flex-wrap gap-1">
+          {recipe.dietLabels.map((label) => (
+            <span
+              key={label}
+              className="bg-green-50 text-green-600 text-[10px] px-2 py-0.5 rounded-full"
+            >
+              {label}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* Tags */}
-      {recipe.tags.length > 0 && (
+      {!recipe.dietLabels?.length && recipe.tags.length > 0 && (
         <div className="px-4 pt-3 flex flex-wrap gap-1">
           {recipe.tags.map((tag) => (
             <span
@@ -74,7 +116,7 @@ export default function RecipeCard({
             {showDetails ? (
               <>Hide details <ChevronUp size={14} /></>
             ) : (
-              <>Show ingredients & instructions <ChevronDown size={14} /></>
+              <>Show ingredients{!isEdamam && " & instructions"} <ChevronDown size={14} /></>
             )}
           </button>
 
@@ -86,21 +128,47 @@ export default function RecipeCard({
                 </h4>
                 <ul className="text-sm text-gray-600 space-y-1">
                   {recipe.ingredients.map((ing, i) => (
-                    <li key={i} className="flex gap-2">
-                      <span className="text-gray-400 min-w-[80px] text-right">{ing.measure}</span>
-                      <span>{ing.ingredient}</span>
+                    <li key={i} className={isEdamam ? "" : "flex gap-2"}>
+                      {isEdamam ? (
+                        <span>{ing.ingredient}</span>
+                      ) : (
+                        <>
+                          <span className="text-gray-400 min-w-[80px] text-right">{ing.measure}</span>
+                          <span>{ing.ingredient}</span>
+                        </>
+                      )}
                     </li>
                   ))}
                 </ul>
               </div>
-              <div>
-                <h4 className="font-medium text-xs text-gray-400 uppercase tracking-wide mb-2">
-                  Instructions
-                </h4>
-                <p className="text-sm text-gray-600 whitespace-pre-line leading-relaxed">
-                  {recipe.instructions}
-                </p>
-              </div>
+
+              {/* Health labels (Edamam) */}
+              {recipe.healthLabels && recipe.healthLabels.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-xs text-gray-400 uppercase tracking-wide mb-2">
+                    Health Labels
+                  </h4>
+                  <div className="flex flex-wrap gap-1">
+                    {recipe.healthLabels.map((label) => (
+                      <span key={label} className="bg-gray-50 text-gray-500 text-[10px] px-2 py-0.5 rounded-full">
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {recipe.instructions && (
+                <div>
+                  <h4 className="font-medium text-xs text-gray-400 uppercase tracking-wide mb-2">
+                    Instructions
+                  </h4>
+                  <p className="text-sm text-gray-600 whitespace-pre-line leading-relaxed">
+                    {recipe.instructions}
+                  </p>
+                </div>
+              )}
+
               <div className="flex gap-3">
                 {recipe.youtubeUrl && (
                   <a
@@ -119,12 +187,26 @@ export default function RecipeCard({
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600"
                   >
-                    <ExternalLink size={14} /> Source
+                    <ExternalLink size={14} /> {isEdamam ? "Full Recipe" : "Source"}
                   </a>
                 )}
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Edamam: link to full recipe when no ingredients loaded */}
+      {!compact && isEdamam && recipe.ingredients.length === 0 && recipe.sourceUrl && (
+        <div className="px-4 pt-3">
+          <a
+            href={recipe.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 font-medium"
+          >
+            <ExternalLink size={14} /> View full recipe
+          </a>
         </div>
       )}
 
