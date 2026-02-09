@@ -12,6 +12,7 @@ import {
   getManualRecipes,
 } from "@/lib/firebase";
 import type { Recipe, RecipeAction } from "@/types/recipe";
+import { Shuffle } from "lucide-react";
 
 type MealType = "breakfast" | "lunch" | "dinner" | "any";
 
@@ -34,7 +35,6 @@ export default function SuggestPage() {
         getRecentHistory(),
       ]);
 
-      // Recent "not now" recipes from the last 7 days
       const recentIds = new Set(
         history
           .filter(
@@ -45,7 +45,6 @@ export default function SuggestPage() {
           .map((h) => h.recipeId)
       );
 
-      // Try to get a non-blocked, non-recent recipe
       let attempts = 0;
       let candidate: Recipe | null = null;
 
@@ -63,7 +62,6 @@ export default function SuggestPage() {
         attempts++;
       }
 
-      // Also try manual recipes if available
       if (!candidate) {
         try {
           const manualRecipes = await getManualRecipes();
@@ -77,7 +75,7 @@ export default function SuggestPage() {
             candidate = eligible[Math.floor(Math.random() * eligible.length)];
           }
         } catch {
-          // Manual recipes not available, continue
+          // continue
         }
       }
 
@@ -102,19 +100,18 @@ export default function SuggestPage() {
 
         if (action === "maybe") {
           await addMaybeRecipe(recipe);
-          setActionFeedback("Added to your Maybe list!");
+          setActionFeedback("Added to your Maybe list");
         } else if (action === "never") {
-          await blockRecipe(recipe.id);
-          setActionFeedback("Recipe blocked. You won't see it again.");
+          await blockRecipe(recipe.id, recipe.name);
+          setActionFeedback("Hidden from future suggestions");
         } else {
-          setActionFeedback("Skipped for now.");
+          setActionFeedback("Skipped for now");
         }
 
-        // Auto-fetch next suggestion after a brief delay
         setTimeout(() => {
           setActionFeedback(null);
           fetchSuggestion();
-        }, 1200);
+        }, 1000);
       } catch {
         setError("Failed to save your choice. Check Firebase configuration.");
       }
@@ -131,21 +128,23 @@ export default function SuggestPage() {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold text-gray-800 mb-1">Recipe Randomiser</h1>
-      <p className="text-gray-500 text-sm mb-4">
-        Get random recipe suggestions for your meal plan
-      </p>
+      <div className="mb-6">
+        <h1 className="text-xl font-semibold text-gray-900">Suggest</h1>
+        <p className="text-gray-400 text-xs mt-0.5">
+          Random recipe ideas for your meal plan
+        </p>
+      </div>
 
       {/* Meal type selector */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-1.5 mb-4">
         {mealTypes.map(({ value, label }) => (
           <button
             key={value}
             onClick={() => setMealType(value)}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`flex-1 py-2.5 rounded-lg text-xs font-medium transition-colors ${
               mealType === value
-                ? "bg-blue-600 text-white"
-                : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+                ? "bg-gray-900 text-white"
+                : "bg-white text-gray-500 border border-gray-100 hover:bg-gray-50"
             }`}
           >
             {label}
@@ -157,21 +156,22 @@ export default function SuggestPage() {
       <button
         onClick={fetchSuggestion}
         disabled={loading}
-        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold text-lg mb-4 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 transition-all"
+        className="w-full flex items-center justify-center gap-2 bg-gray-900 text-white py-3.5 rounded-xl font-medium text-sm mb-4 hover:bg-gray-800 disabled:opacity-50 transition-colors active:scale-[0.99]"
       >
+        <Shuffle size={16} />
         {loading ? "Finding a recipe..." : "Suggest a Recipe"}
       </button>
 
-      {/* Feedback toast */}
+      {/* Feedback */}
       {actionFeedback && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-lg mb-4 text-sm text-center animate-pulse">
+        <div className="bg-gray-50 border border-gray-100 text-gray-600 px-4 py-2.5 rounded-lg mb-4 text-xs text-center">
           {actionFeedback}
         </div>
       )}
 
       {/* Error */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
+        <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-lg mb-4 text-xs">
           {error}
         </div>
       )}
@@ -183,11 +183,9 @@ export default function SuggestPage() {
 
       {/* Empty state */}
       {!recipe && !loading && !error && (
-        <div className="text-center py-16 text-gray-400">
-          <p className="text-lg">Choose a meal type and hit suggest!</p>
-          <p className="text-sm mt-1">
-            We&apos;ll find a random recipe for you
-          </p>
+        <div className="text-center py-20 text-gray-300">
+          <Shuffle size={40} className="mx-auto mb-3" />
+          <p className="text-sm">Choose a meal type and hit suggest</p>
         </div>
       )}
     </div>

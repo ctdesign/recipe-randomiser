@@ -26,13 +26,28 @@ export interface MaybeRecipe {
   addedAt: number;
 }
 
-export interface WeeklyPlan {
-  weekStart: string; // ISO date string for Monday
-  meals: {
-    [day: string]: {
-      breakfast?: Recipe | null;
-      lunch?: Recipe | null;
-      dinner?: Recipe | null;
-    };
-  };
+export interface BlockedRecipe {
+  id: string;
+  name: string;
+  blockedAt: number;
 }
+
+export interface UserPreferences {
+  planWeeks: number; // 1–52
+  weekStartDay: number; // 0=Sunday, 1=Monday, ..., 6=Saturday
+}
+
+export const DEFAULT_PREFERENCES: UserPreferences = {
+  planWeeks: 2,
+  weekStartDay: 1, // Monday
+};
+
+export const DAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
