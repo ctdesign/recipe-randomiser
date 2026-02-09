@@ -4,24 +4,23 @@ import { useState, useEffect } from "react";
 import RecipeCard from "@/components/RecipeCard";
 import { getMaybeRecipes, removeMaybeRecipe } from "@/lib/firebase";
 import type { MaybeRecipe } from "@/types/recipe";
+import { Bookmark } from "lucide-react";
 
 export default function MaybeListPage() {
   const [recipes, setRecipes] = useState<MaybeRecipe[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadRecipes = async () => {
-    setLoading(true);
-    try {
-      const data = await getMaybeRecipes();
-      setRecipes(data);
-    } catch {
-      // Firebase not configured yet
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const loadRecipes = async () => {
+      try {
+        const data = await getMaybeRecipes();
+        setRecipes(data);
+      } catch {
+        // Firebase not configured yet
+      } finally {
+        setLoading(false);
+      }
+    };
     loadRecipes();
   }, []);
 
@@ -32,25 +31,28 @@ export default function MaybeListPage() {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold text-gray-800 mb-1">Maybe List</h1>
-      <p className="text-gray-500 text-sm mb-4">
-        Recipes you&apos;re considering for your meal plan
-      </p>
+      <div className="mb-6">
+        <h1 className="text-xl font-semibold text-gray-900">Maybe List</h1>
+        <p className="text-gray-400 text-xs mt-0.5">
+          {recipes.length} recipe{recipes.length !== 1 ? "s" : ""} saved for review
+        </p>
+      </div>
 
       {loading && (
-        <div className="text-center py-16 text-gray-400">Loading...</div>
+        <div className="text-center py-16 text-gray-400 text-sm">Loading...</div>
       )}
 
       {!loading && recipes.length === 0 && (
-        <div className="text-center py-16 text-gray-400">
-          <p className="text-lg">No recipes saved yet</p>
-          <p className="text-sm mt-1">
-            Hit &quot;Maybe&quot; on suggestions to add them here
+        <div className="text-center py-20 text-gray-300">
+          <Bookmark size={40} className="mx-auto mb-3" />
+          <p className="text-sm">No recipes saved yet</p>
+          <p className="text-xs mt-1 text-gray-300">
+            Tap &quot;Maybe&quot; on suggestions to add them here
           </p>
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {recipes.map((item) => (
           <RecipeCard
             key={item.recipe.id}

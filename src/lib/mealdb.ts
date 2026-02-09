@@ -131,6 +131,55 @@ export async function getMealById(id: string): Promise<Recipe | null> {
   }
 }
 
+export async function getAllCategories(): Promise<string[]> {
+  try {
+    const res = await fetch(`${BASE_URL}/list.php?c=list`);
+    const data = await res.json();
+    if (data.meals) {
+      return data.meals.map((m: { strCategory: string }) => m.strCategory);
+    }
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getAllAreas(): Promise<string[]> {
+  try {
+    const res = await fetch(`${BASE_URL}/list.php?a=list`);
+    const data = await res.json();
+    if (data.meals) {
+      return data.meals.map((m: { strArea: string }) => m.strArea);
+    }
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getMealsByArea(area: string): Promise<Recipe[]> {
+  try {
+    const res = await fetch(`${BASE_URL}/filter.php?a=${encodeURIComponent(area)}`);
+    const data = await res.json();
+    if (!data.meals) return [];
+    return data.meals.map(
+      (meal: { idMeal: string; strMeal: string; strMealThumb: string }) => ({
+        id: `mealdb_${meal.idMeal}`,
+        name: meal.strMeal,
+        category: "",
+        area,
+        instructions: "",
+        thumbnail: meal.strMealThumb,
+        tags: [],
+        ingredients: [],
+        source: "mealdb" as const,
+      })
+    );
+  } catch {
+    return [];
+  }
+}
+
 export function getCategoriesForMealType(
   mealType: "breakfast" | "lunch" | "dinner"
 ): string[] {

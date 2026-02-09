@@ -9,9 +9,15 @@ import {
   deleteDoc,
   query,
   orderBy,
-  Timestamp,
 } from "firebase/firestore";
-import type { Recipe, RecipePreference, MaybeRecipe } from "@/types/recipe";
+import type {
+  Recipe,
+  RecipePreference,
+  MaybeRecipe,
+  BlockedRecipe,
+  UserPreferences,
+} from "@/types/recipe";
+import { DEFAULT_PREFERENCES } from "@/types/recipe";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -27,15 +33,22 @@ const db = getFirestore(app);
 
 // --- Blocked recipes (Don't Show Again) ---
 
-export async function getBlockedRecipeIds(): Promise<Set<string>> {
+export async function getBlockedRecipes(): Promise<BlockedRecipe[]> {
   const snapshot = await getDocs(collection(db, "blockedRecipes"));
-  return new Set(snapshot.docs.map((d) => d.id));
+  return snapshot.docs.map((d) => d.data() as BlockedRecipe);
 }
 
-export async function blockRecipe(recipeId: string): Promise<void> {
+export async function getBlockedRecipeIds(): Promise<Set<string>> {
+  const blocked = await getBlockedRecipes();
+  return new Set(blocked.map((b) => b.id));
+}
+
+export async function blockRecipe(recipeId: string, recipeName: string): Promise<void> {
   await setDoc(doc(db, "blockedRecipes", recipeId), {
-    blockedAt: Timestamp.now(),
-  });
+    id: recipeId,
+    name: recipeName,
+    blockedAt: Date.now(),
+  } satisfies BlockedRecipe);
 }
 
 export async function unblockRecipe(recipeId: string): Promise<void> {
@@ -97,14 +110,29 @@ export async function deleteManualRecipe(recipeId: string): Promise<void> {
   await deleteDoc(doc(db, "manualRecipes", recipeId));
 }
 
-// --- Weekly plan ---
+// --- Meal plan ---
 
-export async function getWeeklyPlan(weekStart: string) {
-  const docRef = doc(db, "weeklyPlans", weekStart);
+export async function getMealPlan(planId: string) {
+  const docRef = doc(db, "mealPlans", planId);
   const snapshot = await getDoc(docRef);
   return snapshot.exists() ? snapshot.data() : null;
 }
 
-export async function saveWeeklyPlan(weekStart: string, plan: Record<string, unknown>): Promise<void> {
-  await setDoc(doc(db, "weeklyPlans", weekStart), { weekStart, meals: plan });
+export async function saveMealPlan(planId: string, plan: Record<string, unknown>): Promise<void> {
+  await setDoc(doc(db, "mealPlans", planId), plan);
+}
+
+// --- User preferences ---
+
+export async function getUserPreferences(): Promise<UserPreferences> {
+  const docRef = doc(db, "settings", "preferences");
+  const snapshot = await getDoc(docRef);
+  if (snapshot.exists()) {
+    return { ...DEFAULT_PREFERENCES, ...snapshot.data() } as UserPreferences;
+  }
+  return DEFAULT_PREFERENCES;
+}
+
+export async function saveUserPreferences(prefs: UserPreferences): Promise<void> {
+  await setDoc(doc(db, "settings", "preferences"), prefs);
 }
