@@ -7,6 +7,14 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "www.themealdb.com",
       },
+      {
+        protocol: "https",
+        hostname: "img.spoonacular.com",
+      },
+      {
+        protocol: "https",
+        hostname: "spoonacular.com",
+      },
     ],
   },
 };

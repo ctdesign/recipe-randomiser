@@ -7,11 +7,10 @@ export interface Recipe {
   thumbnail: string;
   tags: string[];
   ingredients: { ingredient: string; measure: string }[];
-  source: "mealdb" | "edamam" | "manual";
+  source: "mealdb" | "spoonacular" | "manual";
   mealType?: "breakfast" | "lunch" | "dinner" | "any";
   youtubeUrl?: string;
   sourceUrl?: string;
-  // Edamam-specific fields
   calories?: number;
   totalTime?: number;
   servings?: number;
@@ -59,71 +58,77 @@ export const DAY_NAMES = [
   "Saturday",
 ];
 
-// Edamam filter options
-export const EDAMAM_DIET_LABELS = [
-  "balanced",
-  "high-fiber",
-  "high-protein",
-  "low-carb",
-  "low-fat",
-  "low-sodium",
-] as const;
-
-export const EDAMAM_HEALTH_LABELS = [
-  "alcohol-free",
-  "celery-free",
-  "crustacean-free",
-  "dairy-free",
-  "egg-free",
-  "fish-free",
-  "gluten-free",
-  "keto-friendly",
-  "kidney-friendly",
-  "kosher",
-  "low-sugar",
-  "lupine-free",
-  "mollusk-free",
-  "mustard-free",
-  "no-oil-added",
-  "paleo",
-  "peanut-free",
-  "pescatarian",
-  "pork-free",
-  "red-meat-free",
-  "sesame-free",
-  "shellfish-free",
-  "soy-free",
-  "sugar-conscious",
-  "tree-nut-free",
-  "vegan",
+// Spoonacular filter options
+export const SPOONACULAR_DIETS = [
+  "gluten free",
+  "ketogenic",
   "vegetarian",
-  "wheat-free",
+  "lacto-vegetarian",
+  "ovo-vegetarian",
+  "vegan",
+  "pescetarian",
+  "paleo",
+  "primal",
+  "whole30",
 ] as const;
 
-export const EDAMAM_CUISINE_TYPES = [
+export const SPOONACULAR_INTOLERANCES = [
+  "dairy",
+  "egg",
+  "gluten",
+  "grain",
+  "peanut",
+  "seafood",
+  "sesame",
+  "shellfish",
+  "soy",
+  "sulfite",
+  "tree nut",
+  "wheat",
+] as const;
+
+export const SPOONACULAR_CUISINES = [
+  "African",
   "American",
-  "Asian",
   "British",
+  "Cajun",
   "Caribbean",
-  "Central Europe",
   "Chinese",
-  "Eastern Europe",
+  "Eastern European",
+  "European",
   "French",
+  "German",
+  "Greek",
   "Indian",
+  "Irish",
   "Italian",
   "Japanese",
-  "Kosher",
+  "Jewish",
+  "Korean",
+  "Latin American",
   "Mediterranean",
   "Mexican",
   "Middle Eastern",
   "Nordic",
-  "South American",
-  "South East Asian",
+  "Southern",
+  "Spanish",
+  "Thai",
+  "Vietnamese",
 ] as const;
 
-export const EDAMAM_MEAL_TYPES = [
-  "Breakfast",
-  "Lunch",
-  "Dinner",
-  "Snack",
+export const SPOONACULAR_MEAL_TYPES = [
+  "main course",
+  "side dish",
+  "dessert",
+  "appetizer",
+  "salad",
+  "bread",
+  "breakfast",
+  "soup",
+  "beverage",
+  "sauce",
+  "marinade",
+  "fingerfood",
+  "snack",
+  "drink",
 ] as const;

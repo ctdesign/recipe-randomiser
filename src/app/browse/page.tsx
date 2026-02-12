@@ -10,18 +10,18 @@ import {
   getAllCategories,
   getAllAreas,
 } from "@/lib/mealdb";
-import { searchEdamam, isEdamamConfigured } from "@/lib/edamam";
+import { searchSpoonacular, isSpoonacularConfigured } from "@/lib/spoonacular";
 import { addMaybeRecipe, blockRecipe, addToHistory } from "@/lib/firebase";
 import type { Recipe, RecipeAction } from "@/types/recipe";
 import {
-  EDAMAM_DIET_LABELS,
-  EDAMAM_HEALTH_LABELS,
-  EDAMAM_CUISINE_TYPES,
-  EDAMAM_MEAL_TYPES,
+  SPOONACULAR_DIETS,
+  SPOONACULAR_INTOLERANCES,
+  SPOONACULAR_CUISINES,
+  SPOONACULAR_MEAL_TYPES,
 } from "@/types/recipe";
 import { Search, Filter, X, Loader2 } from "lucide-react";
 
-type SearchSource = "all" | "mealdb" | "edamam";
+type SearchSource = "all" | "mealdb" | "spoonacular";
 
 export default function BrowsePage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -36,9 +36,9 @@ export default function BrowsePage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [selectedArea, setSelectedArea] = useState<string>("");
 
-  // Edamam filters
+  // Spoonacular filters
   const [selectedDiet, setSelectedDiet] = useState<string>("");
-  const [selectedHealth, setSelectedHealth] = useState<string[]>([]);
+  const [selectedIntolerances, setSelectedIntolerances] = useState<string[]>([]);
   const [selectedCuisine, setSelectedCuisine] = useState<string>("");
   const [selectedMealType, setSelectedMealType] = useState<string>("");
 
@@ -47,7 +47,7 @@ export default function BrowsePage() {
   const [loadingDetail, setLoadingDetail] = useState<string | null>(null);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
 
-  const edamamAvailable = isEdamamConfigured();
+  const spoonacularAvailable = isSpoonacularConfigured();
 
   useEffect(() => {
     const loadFilters = async () => {
@@ -59,7 +59,7 @@ export default function BrowsePage() {
   }, []);
 
   const handleSearch = async () => {
-    if (!searchQuery.trim() && !selectedCategory && !selectedArea && !selectedDiet && !selectedHealth.length && !selectedCuisine && !selectedMealType) return;
+    if (!searchQuery.trim() && !selectedCategory && !selectedArea && !selectedDiet && !selectedIntolerances.length && !selectedCuisine && !selectedMealType) return;
     setLoading(true);
     setResults([]);
     setTotalResults(0);
@@ -69,7 +69,7 @@ export default function BrowsePage() {
       let total = 0;
 
       // MealDB search
-      if (searchSource !== "edamam") {
+      if (searchSource !== "spoonacular") {
         let mealdbResults: Recipe[] = [];
 
         if (searchQuery.trim()) {
@@ -91,19 +91,19 @@ export default function BrowsePage() {
         total += mealdbResults.length;
       }
 
-      // Edamam search
-      if (searchSource !== "mealdb" && edamamAvailable) {
-        const hasEdamamFilters = selectedDiet || selectedHealth.length > 0 || selectedCuisine || selectedMealType;
-        if (searchQuery.trim() || hasEdamamFilters) {
-          const edamamResult = await searchEdamam({
+      // Spoonacular search
+      if (searchSource !== "mealdb" && spoonacularAvailable) {
+        const hasSpoonacularFilters = selectedDiet || selectedIntolerances.length > 0 || selectedCuisine || selectedMealType;
+        if (searchQuery.trim() || hasSpoonacularFilters) {
+          const spoonacularResult = await searchSpoonacular({
             query: searchQuery.trim() || undefined,
             diet: selectedDiet || undefined,
-            health: selectedHealth.length > 0 ? selectedHealth : undefined,
-            cuisineType: selectedCuisine || undefined,
-            mealType: selectedMealType || undefined,
+            intolerances: selectedIntolerances.length > 0 ? selectedIntolerances.join(",") : undefined,
+            cuisine: selectedCuisine || undefined,
+            type: selectedMealType || undefined,
           });
-          allResults = [...allResults, ...edamamResult.recipes];
-          total += edamamResult.total;
+          allResults = [...allResults, ...spoonacularResult.recipes];
+          total += spoonacularResult.total;
         }
       }
 
@@ -117,8 +117,8 @@ export default function BrowsePage() {
   };
 
   const handleLoadDetail = async (recipe: Recipe) => {
-    // Edamam recipes always have ingredients, just toggle
-    if (recipe.source === "edamam" || recipe.instructions) {
+    // Spoonacular recipes already have ingredients, just toggle
+    if (recipe.source === "spoonacular" || recipe.instructions) {
       setExpandedRecipe(expandedRecipe === recipe.id ? null : recipe.id);
       return;
     }
@@ -153,8 +153,8 @@ export default function BrowsePage() {
     }
   };
 
-  const toggleHealthLabel = (label: string) => {
-    setSelectedHealth((prev) =>
+  const toggleIntolerance = (label: string) => {
+    setSelectedIntolerances((prev) =>
       prev.includes(label) ? prev.filter((h) => h !== label) : [...prev, label]
     );
   };
@@ -163,7 +163,7 @@ export default function BrowsePage() {
     setSelectedCategory("");
     setSelectedArea("");
     setSelectedDiet("");
-    setSelectedHealth([]);
+    setSelectedIntolerances([]);
     setSelectedCuisine("");
     setSelectedMealType("");
     setSearchQuery("");
@@ -175,7 +175,7 @@ export default function BrowsePage() {
     (selectedCategory ? 1 : 0) +
     (selectedArea ? 1 : 0) +
     (selectedDiet ? 1 : 0) +
-    selectedHealth.length +
+    selectedIntolerances.length +
     (selectedCuisine ? 1 : 0) +
     (selectedMealType ? 1 : 0);
 
@@ -184,17 +184,17 @@ export default function BrowsePage() {
       <div className="mb-6">
         <h1 className="text-xl font-semibold text-gray-900">Browse</h1>
         <p className="text-gray-400 text-xs mt-0.5">
-          Search {edamamAvailable ? "2M+" : ""} recipes with filters
+          Search {spoonacularAvailable ? "360k+" : ""} recipes with filters
         </p>
       </div>
 
       {/* Source tabs */}
-      {edamamAvailable && (
+      {spoonacularAvailable && (
         <div className="flex gap-1.5 mb-3">
           {([
             { value: "all", label: "All Sources" },
             { value: "mealdb", label: "MealDB" },
-            { value: "edamam", label: "Edamam" },
+            { value: "spoonacular", label: "Spoonacular" },
           ] as { value: SearchSource; label: string }[]).map(({ value, label }) => (
             <button
               key={value}
@@ -261,7 +261,7 @@ export default function BrowsePage() {
           </div>
 
           {/* MealDB filters */}
-          {searchSource !== "edamam" && (
+          {searchSource !== "spoonacular" && (
             <>
               <div>
                 <label className="block text-xs text-gray-500 mb-1.5">Category (MealDB)</label>
@@ -293,32 +293,32 @@ export default function BrowsePage() {
             </>
           )}
 
-          {/* Edamam filters */}
-          {edamamAvailable && searchSource !== "mealdb" && (
+          {/* Spoonacular filters */}
+          {spoonacularAvailable && searchSource !== "mealdb" && (
             <>
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Meal Type (Edamam)</label>
+                <label className="block text-xs text-gray-500 mb-1.5">Meal Type (Spoonacular)</label>
                 <select
                   value={selectedMealType}
                   onChange={(e) => setSelectedMealType(e.target.value)}
                   className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-sm"
                 >
-                  <option value="">Any meal</option>
-                  {EDAMAM_MEAL_TYPES.map((mt) => (
-                    <option key={mt} value={mt}>{mt}</option>
+                  <option value="">Any type</option>
+                  {SPOONACULAR_MEAL_TYPES.map((mt) => (
+                    <option key={mt} value={mt} className="capitalize">{mt}</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Cuisine (Edamam)</label>
+                <label className="block text-xs text-gray-500 mb-1.5">Cuisine (Spoonacular)</label>
                 <select
                   value={selectedCuisine}
                   onChange={(e) => setSelectedCuisine(e.target.value)}
                   className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-sm"
                 >
                   <option value="">All cuisines</option>
-                  {EDAMAM_CUISINE_TYPES.map((c) => (
+                  {SPOONACULAR_CUISINES.map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
@@ -332,23 +332,23 @@ export default function BrowsePage() {
                   className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-sm"
                 >
                   <option value="">Any diet</option>
-                  {EDAMAM_DIET_LABELS.map((d) => (
-                    <option key={d} value={d}>{d}</option>
+                  {SPOONACULAR_DIETS.map((d) => (
+                    <option key={d} value={d} className="capitalize">{d}</option>
                   ))}
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs text-gray-500 mb-1.5">
-                  Health / Allergy ({selectedHealth.length} selected)
+                  Intolerances ({selectedIntolerances.length} selected)
                 </label>
                 <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
-                  {EDAMAM_HEALTH_LABELS.map((label) => (
+                  {SPOONACULAR_INTOLERANCES.map((label) => (
                     <button
                       key={label}
-                      onClick={() => toggleHealthLabel(label)}
-                      className={`px-2 py-1 rounded-full text-[10px] font-medium transition-colors ${
-                        selectedHealth.includes(label)
+                      onClick={() => toggleIntolerance(label)}
+                      className={`px-2 py-1 rounded-full text-[10px] font-medium transition-colors capitalize ${
+                        selectedIntolerances.includes(label)
                           ? "bg-gray-900 text-white"
                           : "bg-gray-50 text-gray-500 hover:bg-gray-100"
                       }`}
@@ -397,7 +397,7 @@ export default function BrowsePage() {
                   <p className="font-medium text-sm text-gray-900 truncate">{recipe.name}</p>
                   <p className="text-xs text-gray-400 mt-0.5">
                     {recipe.category || recipe.area || "Tap to view details"}
-                    {recipe.source === "edamam" && recipe.calories ? ` · ${recipe.calories} cal` : ""}
+                    {recipe.source === "spoonacular" && recipe.calories ? ` · ${recipe.calories} cal` : ""}
                   </p>
                 </div>
                 {loadingDetail === recipe.id ? (
@@ -421,7 +421,7 @@ export default function BrowsePage() {
               </div>
 
               {/* Expanded detail */}
-              {expandedRecipe === recipe.id && (recipe.instructions || recipe.source === "edamam") && (
+              {expandedRecipe === recipe.id && (recipe.instructions || recipe.source === "spoonacular") && (
                 <div className="mt-1">
                   <RecipeCard recipe={recipe} showActions={false} />
                 </div>
@@ -435,7 +435,7 @@ export default function BrowsePage() {
         <div className="text-center py-20 text-gray-300">
           <Search size={40} className="mx-auto mb-3" />
           <p className="text-sm">Search by name, ingredient, or use filters</p>
-          {edamamAvailable && (
+          {spoonacularAvailable && (
             <p className="text-xs mt-1">Try dietary filters like gluten-free or vegan</p>
           )}
         </div>
