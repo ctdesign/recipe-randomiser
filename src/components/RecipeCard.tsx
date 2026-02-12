@@ -22,7 +22,7 @@ export default function RecipeCard({
   const [showDetails, setShowDetails] = useState(false);
 
   const hasNutritionInfo = recipe.calories || recipe.totalTime || recipe.servings;
-  const isEdamam = recipe.source === "edamam";
+  const isSpoonacular = recipe.source === "spoonacular";
 
   return (
     <div className="bg-white rounded-xl overflow-hidden border border-gray-100">
@@ -49,7 +49,7 @@ export default function RecipeCard({
           <h3 className="text-white font-semibold text-lg leading-tight">{recipe.name}</h3>
           <p className="text-white/70 text-xs mt-0.5">
             {recipe.category}{recipe.area ? ` · ${recipe.area}` : ""}
-            {isEdamam && <span className="ml-1 opacity-60">· Edamam</span>}
+            {isSpoonacular && <span className="ml-1 opacity-60">· Spoonacular</span>}
           </p>
         </div>
       </div>
@@ -78,13 +78,13 @@ export default function RecipeCard({
         </div>
       )}
 
-      {/* Diet / health labels */}
+      {/* Diet labels */}
       {recipe.dietLabels && recipe.dietLabels.length > 0 && (
         <div className="px-4 pt-2 flex flex-wrap gap-1">
           {recipe.dietLabels.map((label) => (
             <span
               key={label}
-              className="bg-green-50 text-green-600 text-[10px] px-2 py-0.5 rounded-full"
+              className="bg-green-50 text-green-600 text-[10px] px-2 py-0.5 rounded-full capitalize"
             >
               {label}
             </span>
@@ -116,7 +116,7 @@ export default function RecipeCard({
             {showDetails ? (
               <>Hide details <ChevronUp size={14} /></>
             ) : (
-              <>Show ingredients{!isEdamam && " & instructions"} <ChevronDown size={14} /></>
+              <>Show ingredients & instructions <ChevronDown size={14} /></>
             )}
           </button>
 
@@ -128,35 +128,15 @@ export default function RecipeCard({
                 </h4>
                 <ul className="text-sm text-gray-600 space-y-1">
                   {recipe.ingredients.map((ing, i) => (
-                    <li key={i} className={isEdamam ? "" : "flex gap-2"}>
-                      {isEdamam ? (
-                        <span>{ing.ingredient}</span>
-                      ) : (
-                        <>
-                          <span className="text-gray-400 min-w-[80px] text-right">{ing.measure}</span>
-                          <span>{ing.ingredient}</span>
-                        </>
+                    <li key={i} className="flex gap-2">
+                      {ing.measure && (
+                        <span className="text-gray-400 min-w-[80px] text-right">{ing.measure}</span>
                       )}
+                      <span>{ing.ingredient}</span>
                     </li>
                   ))}
                 </ul>
               </div>
-
-              {/* Health labels (Edamam) */}
-              {recipe.healthLabels && recipe.healthLabels.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-xs text-gray-400 uppercase tracking-wide mb-2">
-                    Health Labels
-                  </h4>
-                  <div className="flex flex-wrap gap-1">
-                    {recipe.healthLabels.map((label) => (
-                      <span key={label} className="bg-gray-50 text-gray-500 text-[10px] px-2 py-0.5 rounded-full">
-                        {label}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {recipe.instructions && (
                 <div>
@@ -187,7 +167,7 @@ export default function RecipeCard({
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600"
                   >
-                    <ExternalLink size={14} /> {isEdamam ? "Full Recipe" : "Source"}
+                    <ExternalLink size={14} /> {isSpoonacular ? "Full Recipe" : "Source"}
                   </a>
                 )}
               </div>
@@ -196,8 +176,8 @@ export default function RecipeCard({
         </div>
       )}
 
-      {/* Edamam: link to full recipe when no ingredients loaded */}
-      {!compact && isEdamam && recipe.ingredients.length === 0 && recipe.sourceUrl && (
+      {/* Link to full recipe when no ingredients loaded */}
+      {!compact && isSpoonacular && recipe.ingredients.length === 0 && recipe.sourceUrl && (
         <div className="px-4 pt-3">
           <a
             href={recipe.sourceUrl}

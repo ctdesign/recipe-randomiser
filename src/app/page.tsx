@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import RecipeCard from "@/components/RecipeCard";
 import { getRandomMealForType, getRandomMeal } from "@/lib/mealdb";
-import { getRandomEdamamRecipe, isEdamamConfigured } from "@/lib/edamam";
+import { getRandomSpoonacularRecipe, isSpoonacularConfigured } from "@/lib/spoonacular";
 import {
   blockRecipe,
   addMaybeRecipe,
@@ -16,7 +16,7 @@ import type { Recipe, RecipeAction } from "@/types/recipe";
 import { Shuffle } from "lucide-react";
 
 type MealType = "breakfast" | "lunch" | "dinner" | "any";
-type RecipeSource = "any" | "mealdb" | "edamam";
+type RecipeSource = "any" | "mealdb" | "spoonacular";
 
 export default function SuggestPage() {
   const [mealType, setMealType] = useState<MealType>("any");
@@ -25,7 +25,7 @@ export default function SuggestPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
-  const edamamAvailable = isEdamamConfigured();
+  const spoonacularAvailable = isSpoonacularConfigured();
 
   const fetchFromMealDB = useCallback(
     async (
@@ -49,7 +49,7 @@ export default function SuggestPage() {
     []
   );
 
-  const fetchFromEdamam = useCallback(
+  const fetchFromSpoonacular = useCallback(
     async (
       blocked: Set<string>,
       recentIds: Set<string>,
@@ -57,7 +57,7 @@ export default function SuggestPage() {
     ): Promise<Recipe | null> => {
       let attempts = 0;
       while (attempts < 5) {
-        const candidate = await getRandomEdamamRecipe(
+        const candidate = await getRandomSpoonacularRecipe(
           mealType === "any" ? undefined : mealType
         );
         if (candidate && !blocked.has(candidate.id) && !recentIds.has(candidate.id)) {
@@ -96,20 +96,20 @@ export default function SuggestPage() {
 
       if (source === "mealdb") {
         candidate = await fetchFromMealDB(blocked, recentIds, mealType);
-      } else if (source === "edamam" && edamamAvailable) {
-        candidate = await fetchFromEdamam(blocked, recentIds, mealType);
+      } else if (source === "spoonacular" && spoonacularAvailable) {
+        candidate = await fetchFromSpoonacular(blocked, recentIds, mealType);
       } else {
         // "any" source — randomly pick between sources
-        const useEdamam = edamamAvailable && Math.random() > 0.5;
-        if (useEdamam) {
-          candidate = await fetchFromEdamam(blocked, recentIds, mealType);
+        const useSpoonacular = spoonacularAvailable && Math.random() > 0.5;
+        if (useSpoonacular) {
+          candidate = await fetchFromSpoonacular(blocked, recentIds, mealType);
           if (!candidate) {
             candidate = await fetchFromMealDB(blocked, recentIds, mealType);
           }
         } else {
           candidate = await fetchFromMealDB(blocked, recentIds, mealType);
-          if (!candidate && edamamAvailable) {
-            candidate = await fetchFromEdamam(blocked, recentIds, mealType);
+          if (!candidate && spoonacularAvailable) {
+            candidate = await fetchFromSpoonacular(blocked, recentIds, mealType);
           }
         }
       }
@@ -142,7 +142,7 @@ export default function SuggestPage() {
     } finally {
       setLoading(false);
     }
-  }, [mealType, source, edamamAvailable, fetchFromMealDB, fetchFromEdamam]);
+  }, [mealType, source, spoonacularAvailable, fetchFromMealDB, fetchFromSpoonacular]);
 
   const handleAction = useCallback(
     async (action: RecipeAction) => {
@@ -182,7 +182,7 @@ export default function SuggestPage() {
   const sources: { value: RecipeSource; label: string }[] = [
     { value: "any", label: "All Sources" },
     { value: "mealdb", label: "MealDB" },
-    ...(edamamAvailable ? [{ value: "edamam" as RecipeSource, label: "Edamam" }] : []),
+    ...(spoonacularAvailable ? [{ value: "spoonacular" as RecipeSource, label: "Spoonacular" }] : []),
   ];
 
   return (
@@ -212,7 +212,7 @@ export default function SuggestPage() {
       </div>
 
       {/* Source selector */}
-      {edamamAvailable && (
+      {spoonacularAvailable && (
         <div className="flex gap-1.5 mb-4">
           {sources.map(({ value, label }) => (
             <button
